@@ -7,7 +7,16 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0] * 256
+
+        self.reg = [0] * 8
+
+        # Internal Registers
+        self.pc = 0
+        self.ir = 0
+        self.mar = 0
+        self.mdr = 0
+        self.fl = 0
 
     def load(self):
         """Load a program into memory."""
@@ -63,3 +72,18 @@ class CPU:
     def run(self):
         """Run the CPU."""
         pass
+
+    def ram_read(self, mar):
+        if mar >= 0 and mar < len(self.ram):
+            return self.ram[mar]
+        else:
+            print(
+                f"Error: Attempted to read from memory address: {mar}, which is outside of the memory bounds.")
+            return -1
+
+    def ram_write(self, mar, mdr):
+        if mar >= 0 and mar < len(self.ram):
+            self.ram[mar] = mdr & 0xFF
+        else:
+            print(
+                f"Error: Attempted to write to memory address: {mar}, which is outside of the memory bounds.")

@@ -1,6 +1,7 @@
 """CPU functionality."""
 
 import sys
+import os.path
 
 class CPU:
     """Main CPU class."""
@@ -21,6 +22,28 @@ class CPU:
 
         self.reg[7] = 0xF4
     
+        # Setup Branch Table
+        self.branchtable = {}
+        self.branchtable[HLT] = self.execute_HLT
+        self.branchtable[LDI] = self.execute_LDI
+        self.branchtable[PRN] = self.execute_PRN
+        self.branchtable[MUL] = self.execute_MUL
+
+    # Property wrapper for SP (Stack Pointer)
+    @property
+    def sp(self):
+        return self.reg[7]
+
+    @sp.setter
+    def sp(self, a):
+        self.reg[7] = a & 0xFF
+
+    def instruction_size(self):
+        return ((self.ir >> 6) & 0b11) + 1
+
+    def instruction_sets_pc(self):
+        return ((self.ir >> 4) & 0b0001) == 1
+
     def ram_read(self, mar):
         if mar >= 0 and mar < len(self.ram):
             return self.ram[mar]
@@ -36,26 +59,24 @@ class CPU:
             print(
                 f"Error: Attempted to write to memory address: {mar}, which is outside of the memory bounds.")
 
-    def load(self):
+    def load(self, file_name):
         """Load a program into memory."""
-
         address = 0
 
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
-
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        file_path = os.path.join(os.path.dirname(__file__), file_name)
+        try:
+            with open(file_path) as f:
+                for line in f:
+                    num = line.split("#")[0].strip()  # "10000010"
+                    try:
+                        instruction = int(num, 2)
+                        self.ram[address] = instruction
+                        address += 1
+                    except:
+                        continue
+        except:
+            print(f'Could not find file named: {file_name}')
+            sys.exit(1)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -85,34 +106,3 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
 
         print()
-
-    def run(self):
-        """Run the CPU."""
-        running = True
-        while running:
-            # Fetch the next instruction
-            self.ir = self.ram_read(self.pc)
-            operand_a = self.ram_read(self.pc + 1)
-            operand_b = self.ram_read(self.pc + 2)
-
-            # Decode instruction
-            binary_ir = bin(self.ir)[2:].zfill(8)
-            operand_count = int(binary_ir[:2], 2)
-            is_ALU_operation = binary_ir[2] == '1'
-            instruction_does_set_pc = binary_ir[3] == '1'
-            instruction_id = int(binary_ir[4:], 2)
-
-            # Increment the program counter
-            self.pc += (1 + operand_count)
-
-            # Execute instruction
-            if self.ir == int('00000001', 2):  # HLT
-                running = False
-            elif self.ir == int('10000010', 2):  # LDI
-                self.reg[operand_a] = operand_b
-            elif self.ir == int('01000111', 2):  # PRN
-                print(self.reg[operand_a])
-            else:
-                print(
-                    f"Error: Could not execute instruction: {bin(self.ir)[2:].zfill(8)}")
-                sys.exit(1)

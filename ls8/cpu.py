@@ -3,6 +3,13 @@
 import sys
 import os.path
 
+HLT = 0b00000001
+LDI = 0b10000010
+PRN = 0b01000111
+MUL = 0b10100010
+PUSH = 0b01000101
+POP = 0b01000110
+
 class CPU:
     """Main CPU class."""
 
@@ -28,6 +35,8 @@ class CPU:
         self.branchtable[LDI] = self.execute_LDI
         self.branchtable[PRN] = self.execute_PRN
         self.branchtable[MUL] = self.execute_MUL
+        self.branchtable[PUSH] = self.execute_PUSH
+        self.branchtable[POP] = self.execute_POP
 
     # Property wrapper for SP (Stack Pointer)
     @property
@@ -106,3 +115,24 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
 
         print()
+
+    # Run Loop
+
+    def run(self):
+        """Run the CPU."""
+        while not self.halted:
+            self.ir = self.ram_read(self.pc)
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+            if not self.instruction_sets_pc():
+                self.pc += self.instruction_size()
+
+            self.execute_instruction(operand_a, operand_b)
+
+    def execute_instruction(self, operand_a, operand_b):
+        if self.ir in self.branchtable:
+            self.branchtable[self.ir](operand_a, operand_b)
+        else:
+            print(
+                f"Error: Could not find instruction: {self.ir} in branch table.")
+            sys.exit(1)

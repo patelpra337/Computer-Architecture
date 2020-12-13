@@ -9,6 +9,9 @@ PRN = 0b01000111
 MUL = 0b10100010
 PUSH = 0b01000101
 POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
+ADD = 0b10100000
 
 class CPU:
     """Main CPU class."""
@@ -37,6 +40,9 @@ class CPU:
         self.branchtable[MUL] = self.execute_MUL
         self.branchtable[PUSH] = self.execute_PUSH
         self.branchtable[POP] = self.execute_POP
+        self.branchtable[CALL] = self.execute_CALL
+        self.branchtable[RET] = self.execute_RET
+        self.branchtable[ADD] = self.execute_ADD
 
     # Property wrapper for SP (Stack Pointer)
     @property
@@ -136,3 +142,37 @@ class CPU:
             print(
                 f"Error: Could not find instruction: {self.ir} in branch table.")
             sys.exit(1)
+
+    def execute_HLT(self, a=None, b=None):
+        self.halted = True
+
+    def execute_LDI(self, reg_num, val):
+        self.reg[reg_num] = val
+
+    def execute_PRN(self, reg_num, b=None):
+        print(self.reg[reg_num])
+
+    def execute_MUL(self, reg_num, reg_num2):
+        self.reg[reg_num] *= self.reg[reg_num2]
+
+    def execute_PUSH(self, reg_num, b=None):
+        self.sp -= 1
+        self.mdr = self.reg[reg_num]
+        self.ram_write(self.sp, self.mdr)
+
+    def execute_POP(self, dest_reg_num, b=None):
+        self.mdr = self.ram_read(self.sp)
+        self.reg[dest_reg_num] = self.mdr
+        self.sp += 1
+
+    def execute_CALL(self):
+        self.sp -= 1
+        self.ram_write(self.sp, self.pc + self.instruction_size)
+        self.pc = self.reg[self.operand_a]
+
+    def execute_RET(self):
+        self.pc = self.ram_read(self.sp)
+        self.sp += 1
+
+    def execute_ADD(self):
+        self.reg[self.operand_a] += self.reg[self.operand_b]
